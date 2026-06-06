@@ -1,5 +1,3 @@
----
-
 # Now Here to Go 📍 城市漫遊系統
 
 > 「不要問目的地在哪，問問你現在的心情。」
@@ -98,5 +96,3 @@ places = nom_client.search_nearby("cafe", 24.7961, 120.9966)
 * **Backend**: Python 3, Requests
 * **External APIs**: Nominatim (Geocoding), OSRM (Routing)
 * **Storage**: Local JSON
-
----
