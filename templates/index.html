@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <title>Now Here to Go</title>
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+
+    <style>
+        :root {
+            --primary: #8aa0ff;
+            --secondary: #d9e0ff;
+            --panel-bg: rgba(20, 24, 35, 0.72);
+            --card-bg: rgba(255, 255, 255, 0.12);
+            --text-main: #f4f6ff;
+            --text-sub: #cfd5e8;
+        }
+
+        .theme-tired {
+            --primary: #b8c6db;
+            --secondary: #f5f7fa;
+        }
+
+        .theme-lonely {
+            --primary: #667eea;
+            --secondary: #764ba2;
+        }
+
+        .theme-calm {
+            --primary: #89f7b5;
+            --secondary: #66a6ff;
+        }
+
+        .theme-energetic {
+            --primary: #ff9966;
+            --secondary: #ff5e62;
+        }
+
+        .theme-escape {
+            --primary: #8b5cf6;
+            --secondary: #22d3ee;
+        }
+
+        .theme-night {
+            --primary: #00d4ff;
+            --secondary: #7c3aed;
+        }
+
+        body {
+            margin: 0;
+            font-family: "Segoe UI", "Noto Sans TC", sans-serif;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            color: var(--text-main);
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+        }
+
+        #sidebar {
+            width: 360px;
+            padding: 24px;
+            overflow-y: auto;
+            background: var(--panel-bg);
+            backdrop-filter: blur(18px);
+            box-shadow: 8px 0 30px rgba(0, 0, 0, 0.35);
+            z-index: 999;
+        }
+
+        #map {
+            flex: 1;
+            height: 100vh;
+        }
+
+        h1 {
+            margin-top: 0;
+            font-size: 28px;
+            letter-spacing: 1px;
+        }
+
+        #music {
+            font-size: 18px;
+            color: var(--secondary);
+            margin: 18px 0;
+        }
+
+        select,
+        input,
+        button {
+            border: none;
+            outline: none;
+            border-radius: 10px;
+            padding: 9px 10px;
+            margin: 4px 0;
+            font-size: 14px;
+        }
+
+        input {
+            width: 170px;
+        }
+
+        button {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .place-card {
+            background: var(--card-bg);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            padding: 16px;
+            margin: 14px 0;
+            border-radius: 18px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+        }
+
+        .place-card h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 17px;
+        }
+
+        .place-card p {
+            margin: 7px 0;
+            color: var(--text-sub);
+            font-size: 14px;
+        }
+
+        #route-info {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 12px;
+            margin-bottom: 14px;
+        }
+
+        .time-tag {
+            display: inline-block;
+            padding: 5px 9px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.14);
+            color: var(--text-main);
+        }
+
+        .card-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .card-actions button {
+            flex: 1;
+        }
+
+        .fav-btn {
+            background: rgba(255, 255, 255, 0.16);
+            color: var(--text-main);
+        }
+    </style>
+</head>
+
+<body class="theme-tired">
+    <div id="sidebar">
+        <h1>Now Here to Go</h1>
+
+        <select id="mood">
+            <option>Tired</option>
+            <option>Lonely</option>
+            <option>Calm</option>
+            <option>Energetic</option>
+            <option>Escape</option>
+            <option>Night Walk</option>
+        </select>
+
+        <input id="start" placeholder="輸入起點，例如清華大學">
+        <button onclick="recommend()">開始探索</button>
+        <button id="random-btn" onclick="randomPlace()" style="display:none;">隨機地點</button>
+
+        <h2 id="music"></h2>
+        <div id="route-info"></div>
+        <div id="places"></div>
+    </div>
+
+    <div id="map"></div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+    <script>
+        let currentStart = null;
+        let currentPlaces = [];
+
+        let map = L.map("map").setView([24.7961, 120.9966], 15);
+
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            maxZoom: 19,
+            attribution: "© OpenStreetMap"
+        }).addTo(map);
+
+        let routeLayer = null;
+        let markers = [];
+
+        function timeIcon(tag) {
+            if (tag === "day") return "☀️ Day";
+            if (tag === "night") return "🌙 Night";
+            return "☀️ / 🌙 Both";
+        }
+
+        function saveFavorite(index) {
+            const place = currentPlaces[index];
+
+            let favorites = JSON.parse(localStorage.getItem("favorites")) || [];
+            favorites.push(place);
+
+            localStorage.setItem("favorites", JSON.stringify(favorites));
+            alert("已加入收藏：" + place.name);
+        }
+
+        function clearMap() {
+            if (routeLayer) {
+                map.removeLayer(routeLayer);
+                routeLayer = null;
+            }
+
+            markers.forEach(marker => map.removeLayer(marker));
+            markers = [];
+        }
+
+        async function recommend() {
+            const mood = document.getElementById("mood").value;
+            const start = document.getElementById("start").value;
+
+            const res = await fetch("/api/recommend", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({mood, start})
+            });
+
+            const data = await res.json();
+
+            if (data.error) {
+                alert(data.error);
+                return;
+            }
+
+            currentStart = data.start;
+            currentPlaces = data.places;
+            document.getElementById("random-btn").style.display = "inline-block";
+
+            clearMap();
+
+            map.setView(currentStart.coords, 15);
+
+            const startMarker = L.marker(currentStart.coords)
+                .addTo(map)
+                .bindPopup("起點：" + currentStart.name);
+
+            markers.push(startMarker);
+            document.body.className = "theme-" + data.theme;
+            document.getElementById("music").innerText = "Music: " + data.music;
+
+            const container = document.getElementById("places");
+            container.innerHTML = "";
+
+            currentPlaces.forEach((place, index) => {
+                const marker = L.marker(place.coords)
+                    .addTo(map)
+                    .bindPopup(place.name);
+
+                markers.push(marker);
+
+                const div = document.createElement("div");
+                div.className = "place-card";
+
+                div.innerHTML = `
+                    <h3>${place.name}</h3>
+                    <p>類型：${place.category}</p>
+                    <p>距離：約 ${place.distance_km} km</p>
+                    <p class="time-tag">${timeIcon(place.time_tag)}</p>
+
+                    <div class="card-actions">
+                        <button onclick="getRoute(${index})">導航</button>
+                        <button class="fav-btn" onclick="saveFavorite(${index})">收藏</button>
+                    </div>
+                `;
+
+                container.appendChild(div);
+            });
+        }
+        function randomPlace() {
+            if (!currentPlaces || currentPlaces.length === 0) {
+                alert("請先搜尋地點");
+                return;
+            }
+
+            const randomIndex = Math.floor(Math.random() * currentPlaces.length);
+            getRoute(randomIndex);
+        }
+
+        async function getRoute(index) {
+            const place = currentPlaces[index];
+
+            const res = await fetch("/api/route", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({
+                    start: currentStart,
+                    end: place
+                })
+            });
+
+            const route = await res.json();
+
+            if (routeLayer) {
+                map.removeLayer(routeLayer);
+            }
+
+            routeLayer = L.polyline(route.route_coords, {
+                weight: 5
+            }).addTo(map);
+
+            map.fitBounds(routeLayer.getBounds());
+
+            document.getElementById("route-info").innerHTML = `
+                <h3>路線資訊</h3>
+                <p>目的地：${place.name}</p>
+                <p>距離：約 ${route.distance_km} km</p>
+                <p>時間：約 ${route.duration_min} min</p>
+            `;
+        }
+    </script>
+</body>
+</html>
