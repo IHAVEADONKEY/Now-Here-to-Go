@@ -103,7 +103,7 @@ class NominatimClient:
         except requests.exceptions.RequestException as e:
             print(f"[警告] Nominatim API 連線異常: {e}")
             
-        # 對於API可能壞掉，或raw_dara是空的
+        # 對於API可能壞掉，或raw_data是空的
         print(f"[提示] 無法獲取 '{keyword}' 即時資料，啟動 Fallback 備用地點。")
         
         fallback_places = get_fallback_places(keyword)

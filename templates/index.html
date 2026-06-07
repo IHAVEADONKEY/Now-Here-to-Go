@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <title>Now Here to Go</title>
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+
+    <style>
+        :root {
+            --primary: #8aa0ff;
+            --secondary: #d9e0ff;
+            --panel-bg: rgba(20, 24, 35, 0.72);
+            --card-bg: rgba(255, 255, 255, 0.12);
+            --text-main: #f4f6ff;
+            --text-sub: #cfd5e8;
+        }
+
+        .theme-tired {
+            --primary: #b8c6db;
+            --secondary: #f5f7fa;
+        }
+
+        .theme-lonely {
+            --primary: #667eea;
+            --secondary: #764ba2;
+        }
+
+        .theme-calm {
+            --primary: #89f7b5;
+            --secondary: #66a6ff;
+        }
+
+        .theme-energetic {
+            --primary: #ff9966;
+            --secondary: #ff5e62;
+        }
+
+        .theme-escape {
+            --primary: #8b5cf6;
+            --secondary: #22d3ee;
+        }
+
+        .theme-night {
+            --primary: #00d4ff;
+            --secondary: #7c3aed;
+        }
+
+        body {
+            margin: 0;
+            font-family: "Segoe UI", "Noto Sans TC", sans-serif;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            color: var(--text-main);
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+        }
+
+        #sidebar {
+            width: 500px;
+            height: 100vh;
+            padding: 32px 34px 90px 34px;
+            box-sizing: border-box;
+
+            overflow-y: auto;
+            background: var(--panel-bg);
+            backdrop-filter: blur(18px);
+            box-shadow: 8px 0 30px rgba(0, 0, 0, 0.35);
+            z-index: 999;
+
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #map {
+            flex: 1;
+            height: 100vh;
+        }
+
+        h1 {
+            margin-top: 0;
+            font-size: 28px;
+            letter-spacing: 1px;
+        }
+
+        #music {
+            font-size: 18px;
+            color: var(--secondary);
+            margin: 18px 0;
+        }
+
+        select,
+        input,
+        button {
+            border: none;
+            outline: none;
+            border-radius: 10px;
+            padding: 9px 10px;
+            margin: 4px 0;
+            font-size: 14px;
+        }
+
+        input {
+            width: 170px;
+        }
+
+        button {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .place-card {
+            background: var(--card-bg);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            padding: 16px;
+            margin: 14px 0;
+            border-radius: 18px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+        }
+
+        .place-card h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 17px;
+        }
+
+        .place-card p {
+            margin: 7px 0;
+            color: var(--text-sub);
+            font-size: 14px;
+        }
+
+        #route-info {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 12px;
+            margin-bottom: 14px;
+        }
+
+        .time-tag {
+            display: inline-block;
+            padding: 5px 9px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.14);
+            color: var(--text-main);
+        }
+
+        .card-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .card-actions button {
+            flex: 1;
+        }
+
+        .fav-btn {
+            background: rgba(255, 255, 255, 0.16);
+            color: var(--text-main);
+        }
+
+        #mood-text {
+            color: var(--text-sub);
+            font-size: 14px;
+            line-height: 1.6;
+            margin-top: -8px;
+            margin-bottom: 18px;
+        }
+
+        .music-line {
+            font-size: 14px;
+            color: var(--text-main);
+            margin-bottom: 6px;
+            line-height: 1.5;
+        }
+
+        .music-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--secondary);
+        }
+
+        .music-genre {
+            font-size: 13px;
+            color: var(--text-sub);
+            margin-top: 4px;
+        }
+
+        #loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.42);
+            backdrop-filter: blur(4px);
+            z-index: 9999;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+
+        .loading-box {
+            width: 280px;
+            padding: 28px 24px;
+            border-radius: 22px;
+            background: rgba(20, 24, 35, 0.82);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+            text-align: center;
+            color: var(--text-main);
+        }
+
+        .loader {
+            width: 34px;
+            height: 34px;
+            border: 4px solid rgba(255, 255, 255, 0.25);
+            border-top: 4px solid var(--secondary);
+            border-radius: 50%;
+            margin: 0 auto 14px;
+            animation: spin 0.9s linear infinite;
+        }
+
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        #loading-text {
+            margin: 0;
+            font-size: 14px;
+            color: var(--text-sub);
+        }
+
+        .toast {
+            position: fixed;
+            top: 28px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10000;
+
+            padding: 14px 22px;
+            border-radius: 999px;
+
+            background: rgba(20, 24, 35, 0.82);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+
+            color: var(--text-main);
+            font-size: 14px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+        }
+
+        #sidebar {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #search-panel {
+            margin: 18px 0;
+        }
+
+        #search-panel select {
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        .search-box {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+
+            width: 100%;
+            padding: 4px 10px;
+            margin-bottom: 12px;
+
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.14);
+            border: 1px solid rgba(255, 255, 255, 0.16);
+        }
+
+        .search-icon {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+
+        .search-box input {
+            flex: 1;
+            width: auto;
+            background: transparent;
+            color: var(--text-main);
+        }
+
+        .search-box input::placeholder {
+            color: rgba(255, 255, 255, 0.55);
+        }
+
+        .main-search-btn {
+            width: 100%;
+            padding: 13px 12px;
+            font-size: 15px;
+            border-radius: 14px;
+            margin-bottom: 8px;
+        }
+
+        .small-action-btn {
+            width: 100%;
+            padding: 8px 10px;
+            font-size: 13px;
+            opacity: 0.9;
+        }
+
+        #bottom-tools {
+            position: fixed;
+            left: 20px;
+            bottom: 18px;
+
+            width: 460px;
+            height: 46px;
+
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+
+            padding: 0 14px;
+            box-sizing: border-box;
+
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.10);
+            backdrop-filter: blur(14px);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+
+            z-index: 1000;
+        }
+
+        .icon-tool-btn {
+            min-width: 54px;
+            height: 34px;
+            padding: 0 12px;
+
+            border-radius: 13px;
+            font-size: 14px;
+
+            background: rgba(255, 255, 255, 0.14);
+        }
+
+        .fav-btn {
+            flex: 0 0 44px !important;
+            font-size: 20px;
+            padding: 7px 0;
+        }
+
+        .back-btn {
+            width: 100%;
+            margin-bottom: 14px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        #search-panel {
+            width: 100%;
+        }
+
+        #search-panel select,
+        .search-box,
+        .main-search-btn,
+        .small-action-btn {
+            width: 100%;
+        }
+
+        .search-box {
+            padding: 4px 12px;
+            margin-bottom: 12px;
+        }
+
+        .search-box input {
+            width: 100%;
+            min-width: 0;
+        }
+
+        #sidebar {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 255, 255, 0.28) transparent;
+        }
+
+        #sidebar::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #sidebar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        #sidebar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.22);
+            border-radius: 999px;
+        }
+
+        #sidebar::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.36);
+        }
+
+        .start-marker {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--primary);
+            border: 3px solid white;
+            box-shadow: 0 0 12px rgba(0, 0, 0, 0.45);
+        }
+
+        .dest-marker {
+            width: 42px;
+            height: 42px;
+            border-radius: 50% 50% 50% 0;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            transform: rotate(-45deg);
+            border: 3px solid white;
+            box-shadow: 0 0 18px rgba(0, 0, 0, 0.5);
+        }
+
+        .dest-marker span {
+            display: block;
+            transform: rotate(45deg);
+            color: white;
+            font-size: 12px;
+            font-weight: 800;
+            text-align: center;
+            line-height: 36px;
+        }
+
+        .leaflet-tile-pane {
+            filter: saturate(500%) brightness(0.98) contrast(0.92);
+        }
+
+        #map {
+            position: relative;
+        }
+
+        #map::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 350;
+
+            background: linear-gradient(
+                135deg,
+                rgba(120, 140, 255, 0.10),
+                rgba(160, 110, 255, 0.08)
+            );
+        }
+
+        #sidebar {
+            box-shadow:
+                18px 0 60px rgba(0, 0, 0, 0.45),
+                inset -1px 0 0 rgba(255, 255, 255, 0.08);
+        }
+
+        .place-card {
+            box-shadow:
+                0 18px 42px rgba(0, 0, 0, 0.28),
+                inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        }
+
+        #search-panel,
+        #route-info,
+        #bottom-tools {
+            box-shadow:
+                0 14px 36px rgba(0, 0, 0, 0.20),
+                inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        }
+
+        .search-box,
+        select,
+        .main-search-btn,
+        .small-action-btn,
+        .icon-tool-btn {
+            box-shadow:
+                0 8px 22px rgba(0, 0, 0, 0.18);
+        }
+
+        .dest-marker {
+            box-shadow:
+                0 8px 24px rgba(0, 0, 0, 0.42),
+                0 0 20px color-mix(in srgb, var(--secondary) 55%, transparent);
+        }
+
+        .start-marker {
+            box-shadow:
+                0 6px 18px rgba(0, 0, 0, 0.38),
+                0 0 14px color-mix(in srgb, var(--primary) 55%, transparent);
+        }
+
+
+        /* Glassmorphism tuning */
+
+        #sidebar {
+            background: rgba(30, 42, 58, 0.62);
+            backdrop-filter: blur(24px) saturate(135%);
+            -webkit-backdrop-filter: blur(22px) saturate(135%);
+
+            border-right: 1px solid rgba(255, 255, 255, 0.12);
+        }
+
+        .place-card,
+        #route-info,
+        #bottom-tools,
+        .search-box {
+            background: rgba(255, 255, 255, 0.042);
+            backdrop-filter: blur(18px) saturate(130%);
+            -webkit-backdrop-filter: blur(18px) saturate(130%);
+
+            border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+
+        select,
+        input {
+            background: rgba(255, 255, 255, 0.78);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        .main-search-btn,
+        .small-action-btn,
+        .card-actions button,
+        .icon-tool-btn {
+            background: linear-gradient(
+                135deg,
+                color-mix(in srgb, var(--primary) 82%, transparent),
+                color-mix(in srgb, var(--secondary) 82%, transparent)
+            );
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+
+            border: 1px solid rgba(255, 255, 255, 0.16);
+        }
+
+        .fav-btn {
+            background: rgba(255, 255, 255, 0.14);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+        }
+
+        #search-panel {
+            background: transparent !important;
+            box-shadow: none !important;
+            border: none !important;
+            padding: 0;
+        }
+
+        .place-card {
+            transition: transform 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+        }
+
+        .place-card:hover {
+            transform: translateY(-2px);
+            background: rgba(255, 255, 255, 0.16);
+            box-shadow:
+                0 22px 48px rgba(0, 0, 0, 0.32),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+        
+        button {
+            transition: transform 0.15s ease, filter 0.15s ease, opacity 0.15s ease;
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+            filter: brightness(1.08);
+        }
+
+        button:active {
+            transform: translateY(0);
+            filter: brightness(0.96);
+        }
+
+        #route-info:not(:empty) {
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            background: rgba(255, 255, 255, 0.13);
+        }
+
+    </style>
+</head>
+
+<body class="theme-tired">
+
+    <div id="bottom-tools">
+        <button id="lang-toggle" class="icon-tool-btn" onclick="toggleLang()">文 / A</button>
+        <button id="favorite-list-btn" class="icon-tool-btn" onclick="showFavorites()">☆</button>
+    </div>
+
+    <div id="sidebar">
+        <h1>Now Here to Go</h1>
+
+        <p id="mood-text">先選一個心情，讓城市替你回答下一站。</p>
+
+    <div id="search-panel">
+        <select id="mood" onchange="updateMoodText()">
+            <option value="" selected disabled>How are you?</option>
+            <option value="Tired">Tired</option>
+            <option value="Lonely">Lonely</option>
+            <option value="Calm">Calm</option>
+            <option value="Energetic">Energetic</option>
+            <option value="Escape">Escape</option>
+            <option value="Night Walk">Night Walk</option>
+        </select>
+
+        <div class="search-box">
+            <span class="search-icon">🔍</span>
+            <input id="start" placeholder="輸入起點，如國立清華大學">
+        </div>
+
+        <button id="explore-btn" class="main-search-btn" onclick="recommend()">開始探索</button>
+        <button id="random-btn" class="small-action-btn" onclick="randomPlace()" style="display:none;">隨機地點</button>
+    </div>
+
+        <h2 id="music"></h2>
+        <div id="route-info"></div>
+        <div id="places"></div>
+    </div>
+
+    <div id="map"></div>
+
+    <div id="loading-overlay" style="display: none;">
+        <div class="loading-box">
+            <div class="loader"></div>
+            <p id="loading-text">正在尋找適合你的地方...</p>
+        </div>
+    </div>
+
+    <div id="toast" class="toast" style="display: none;"></div>
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+    <script>
+        let currentStart = null;
+        let currentPlaces = [];
+
+        let currentLang = "zh";
+
+        const uiText = {
+            zh: {
+                defaultMoodText: "先選一個心情，讓城市替你回答下一站。",
+                explore: "開始探索",
+                random: "隨機地點",
+                favorites: "查看收藏",
+                music: "音樂關鍵詞",
+                category: "類型",
+                distance: "距離",
+                time: "適合時間",
+                route: "帶我過去",
+                save: "收藏",
+                routeInfo: "路線資訊",
+                destination: "目的地",
+                duration: "時間",
+                noMood: "請先選擇心情",
+                noPlace: "請先搜尋地點",
+                saved: "已加入收藏：",
+                favoriteTitle: "收藏地點",
+                noFavorite: "目前沒有收藏地點。",
+                remove: "移除收藏",
+                loadingFind: "正在尋找適合你的地方...",
+                loadingRoute: "正在規劃路線...",
+                alreadySaved: "已經收藏過了：",
+                backToResults: "回到搜尋結果"
+            },
+            en: {
+                defaultMoodText: "Choose a mood, then let the city answer.",
+                explore: "Start Exploring",
+                random: "Random Place",
+                favorites: "Favorites",
+                music: "Music Keyword",
+                category: "Category",
+                distance: "Distance",
+                time: "Best Time",
+                route: "Take Me There",
+                save: "Save",
+                routeInfo: "Route Info",
+                destination: "Destination",
+                duration: "Time",
+                noMood: "Please choose a mood first.",
+                noPlace: "Please search for places first.",
+                saved: "Saved: ",
+                favoriteTitle: "Favorites",
+                noFavorite: "No favorite places yet.",
+                remove: "Remove",
+                loadingFind: "Finding places that match your mood...",
+                loadingRoute: "Planning your route...",
+                alreadySaved: "Already saved: ",
+                backToResults: "Back to results"
+            }
+        };
+
+        const moodTexts = {
+            zh: {
+                "Tired": "找一個地方坐下來，讓今天慢一點吧~",
+                "Lonely": "有時候只是想找個地方安靜待著",
+                "Calm": "不需要目的地，只是慢慢走一段路",
+                "Energetic": "去人多一點的地方，感受世界的回應",
+                "Escape": "有的時候我真的好想逃離這一切",
+                "Night Walk": "夜晚適合漫步，也適合把事情想清楚"
+            },
+            en: {
+                "Tired": "Find a place to sit down and let today slow down.",
+                "Lonely": "Sometimes you just need a quiet place to stay.",
+                "Calm": "No destination needed. Just walk slowly for a while.",
+                "Energetic": "Go somewhere lively and let the city wake you up.",
+                "Escape": "Leave your usual route for a moment.",
+                "Night Walk": "Night is made for walking and thinking."
+            }
+        };
+
+        const musicTexts = {
+            zh: {
+                "Tired": {
+                    line: "今天聽點安靜的鋼琴怎麼樣？",
+                    title: "ヨスガノソラ メインテーマ-遠い空へ-",
+                    genre: "Piano / Ambient"
+                },
+                "Lonely": {
+                    line: "讓旋律陪你安靜地走一段路。",
+                    title: "Departures 〜あなたにおくるアイの歌〜",
+                    genre: "Slow Piano / EGOIST"
+                },
+                "Calm": {
+                    line: "要聽聽作者推薦的寶藏音樂嗎？",
+                    title: "🎵Falling Stars, Wandering Thoughts🎵",
+                    genre: "Ambient / Piano"
+                },
+                "Energetic": {
+                    line: "今天聽點搖滾的怎麼樣？",
+                    title: "Mas?uerade Rhapsody Re?uest",
+                    genre: "Rock / Ave Mujica"
+                },
+                "Escape": {
+                    line: "像電影配樂一樣，暫時離開現實。",
+                    title: "Cornfield Chase",
+                    genre: "Interstellar / Hans Zimmer"
+                },
+                "Night Walk": {
+                    line: "Stay with me~ 真夜中のドアをたたき",
+                    title: "真夜中のドア / Stay With Me",
+                    genre: "City Pop"
+                }
+            },
+            en: {
+                "Tired": {
+                    line: "Maybe something soft for today.",
+                    title: "Soft Piano",
+                    genre: "Piano / Ambient"
+                },
+                "Lonely": {
+                    line: "Contributor Strongly Recommend!",
+                    title: "Where Snow Can't Reach",
+                    genre: "Piano / Slow"
+                },
+                "Calm": {
+                    line: "A Starlit Lullaby",
+                    title: "A Comforting Night",
+                    genre: "Ambient / Piano"
+                },
+                "Energetic": {
+                    line: "saki chan ●▛▙",
+                    title: "KiLLKiSS",
+                    genre: "Rock / Ave Mujica"
+                },
+                "Escape": {
+                    line: "I do love Interstellar, don't you?",
+                    title: "Stay",
+                    genre: "Interstellar / Hans Zimmer"
+                },
+                "Night Walk": {
+                    line: "Stay with me~ 真夜中のドアをたたき",
+                    title: "真夜中のドア / Stay With Me",
+                    genre: "City Pop"
+                }
+            }
+        };
+
+        const moodLabels = {
+            zh: {
+                "": "今天還好嗎？",
+                "Tired": "疲憊",
+                "Lonely": "孤單",
+                "Calm": "平靜",
+                "Energetic": "有活力",
+                "Escape": "想逃離生活",
+                "Night Walk": "夜晚漫步"
+            },
+            en: {
+                "": "How are you?",
+                "Tired": "Tired",
+                "Lonely": "Lonely",
+                "Calm": "Calm",
+                "Energetic": "Energetic",
+                "Escape": "Escape",
+                "Night Walk": "Night Walk"
+            }
+        };
+
+        let map = L.map("map").setView([24.7961, 120.9966], 15);
+
+        L.tileLayer("https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png", {
+            maxZoom: 19,
+            attribution: "© OpenStreetMap © CARTO"
+        }).addTo(map);
+
+        let routeLayer = null;
+        let destinationMarker = null;
+        let markers = [];
+
+        function toggleLang() {
+            currentLang = currentLang === "zh" ? "en" : "zh";
+
+            updateStaticText();
+            updateMoodOptions();
+            updateMoodText();
+
+            const mood = document.getElementById("mood").value;
+            updateMusicText(mood);
+
+            if (currentPlaces.length > 0) {
+                renderPlaces();
+            }
+        }
+
+        function updateStaticText() {
+            const t = uiText[currentLang];
+
+            document.getElementById("explore-btn").innerText = "🔍 " + t.explore;
+            document.getElementById("random-btn").innerText = t.random;
+            document.getElementById("favorite-list-btn").innerText = "☆";
+
+            if (!document.getElementById("mood").value) {
+                document.getElementById("mood-text").innerText = t.defaultMoodText;
+            }
+        }
+
+        function updateMoodOptions() {
+            const select = document.getElementById("mood");
+
+            for (let option of select.options) {
+                option.text = moodLabels[currentLang][option.value];
+            }
+        }
+
+        function updateMoodText() {
+            const mood = document.getElementById("mood").value;
+
+            if (!mood) {
+                document.getElementById("mood-text").innerText = uiText[currentLang].defaultMoodText;
+                return;
+            }
+
+            document.getElementById("mood-text").innerText = moodTexts[currentLang][mood];
+        }
+
+        function updateMusicText(mood) {
+            if (!mood) {
+                document.getElementById("music").innerHTML = "";
+                return;
+            }
+
+            const music = musicTexts[currentLang][mood];
+
+            document.getElementById("music").innerHTML = `
+                <div class="music-line">${music.line}</div>
+                <div class="music-title">${music.title}</div>
+                <div class="music-genre">${music.genre}</div>
+            `;
+        }
+
+        function showLoading(text) {
+            document.getElementById("loading-text").innerText = text;
+            document.getElementById("loading-overlay").style.display = "flex";
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById("toast");
+
+            toast.innerText = message;
+            toast.style.display = "block";
+
+            setTimeout(() => {
+                toast.style.display = "none";
+            }, 1800);
+        }
+
+        function hideLoading() {
+            document.getElementById("loading-overlay").style.display = "none";
+        }
+
+        function timeIcon(tag) {
+            if (currentLang === "zh") {
+                if (tag === "day") return "☀️ 白天";
+                if (tag === "night") return "🌙 夜晚";
+                return "☀️ / 🌙 皆可";
+            } else {
+                if (tag === "day") return "☀️ Day";
+                if (tag === "night") return "🌙 Night";
+                return "☀️ / 🌙 Both";
+            }
+        }
+
+        function getThemeColor() {
+            return getComputedStyle(document.body)
+                .getPropertyValue("--secondary")
+                .trim();
+        }
+
+        function saveFavorite(index) {
+            const place = currentPlaces[index];
+
+            let favorites = JSON.parse(localStorage.getItem("favorites")) || [];
+
+            const alreadyExists = favorites.some(fav => {
+                return fav.name === place.name &&
+                    fav.coords[0] === place.coords[0] &&
+                    fav.coords[1] === place.coords[1];
+            });
+
+            if (alreadyExists) {
+                showToast(uiText[currentLang].alreadySaved + place.name);
+                return;
+            }
+
+            favorites.push(place);
+            localStorage.setItem("favorites", JSON.stringify(favorites));
+
+            showToast(uiText[currentLang].saved + place.name);
+        }
+
+        function enterFavoritesView() {
+            document.getElementById("search-panel").style.display = "none";
+            document.getElementById("mood-text").style.display = "none";
+            document.getElementById("music").style.display = "none";
+            document.getElementById("route-info").style.display = "none";
+        }
+
+        function exitFavoritesView() {
+            document.getElementById("search-panel").style.display = "block";
+            document.getElementById("mood-text").style.display = "block";
+            document.getElementById("music").style.display = "block";
+            document.getElementById("route-info").style.display = "block";
+        }
+
+        function backToResults() {
+            if (!currentPlaces || currentPlaces.length === 0) {
+                showToast(uiText[currentLang].noPlace);
+                return;
+            }
+
+            exitFavoritesView();
+            renderPlaces();
+        }
+
+        function showFavorites() {
+            enterFavoritesView();
+            const favorites = JSON.parse(localStorage.getItem("favorites")) || [];
+            const container = document.getElementById("places");
+
+            container.innerHTML = `
+                <h2>${uiText[currentLang].favoriteTitle}</h2>
+                <button onclick="backToResults()">${uiText[currentLang].backToResults}</button>
+            `;
+
+            if (favorites.length === 0) {
+                container.innerHTML += "<p>目前沒有收藏地點。</p>";
+                return;
+            }
+
+            favorites.forEach((place, index) => {
+                const div = document.createElement("div");
+                div.className = "place-card";
+
+                div.innerHTML = `
+                    <h3>${place.name}</h3>
+                    <p>類型：${place.category}</p>
+                    <p class="time-tag">${timeIcon(place.time_tag)}</p>
+                    <button onclick="removeFavorite(${index})">移除收藏</button>
+                `;
+
+                container.appendChild(div);
+            });
+        }
+
+        function removeFavorite(index) {
+            let favorites = JSON.parse(localStorage.getItem("favorites")) || [];
+            favorites.splice(index, 1);
+            localStorage.setItem("favorites", JSON.stringify(favorites));
+            showFavorites();
+        }
+
+        function clearMap() {
+            if (routeLayer) {
+                map.removeLayer(routeLayer);
+                routeLayer = null;
+            }
+
+            if (destinationMarker) {
+                map.removeLayer(destinationMarker);
+                destinationMarker = null;
+            }
+
+            markers.forEach(marker => map.removeLayer(marker));
+            markers = [];
+        }
+
+        async function recommend() {
+            const mood = document.getElementById("mood").value;
+            const start = document.getElementById("start").value;
+
+            if (!start.trim()) {
+                alert(currentLang === "zh" ? "請輸入起點" : "Please enter a starting point.");
+                return;
+            }
+
+            if (!mood) {
+                alert(uiText[currentLang].noMood);
+                return;
+            }
+
+            showLoading(uiText[currentLang].loadingFind);
+
+            try{
+                const res = await fetch("/api/recommend", {
+                    method: "POST",
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify({mood, start})
+                });
+
+                const data = await res.json();
+
+                if (data.error) {
+                    alert(data.error);
+                    return;
+                }
+
+                currentStart = data.start;
+                currentPlaces = data.places;
+                document.getElementById("random-btn").style.display = "inline-block";
+
+                clearMap();
+
+                map.setView(currentStart.coords, 15);
+
+                const startIcon = L.divIcon({
+                    className: "",
+                    html: `<div class="start-marker"></div>`,
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+
+                const startMarker = L.marker(currentStart.coords, { icon: startIcon })
+                    .addTo(map)
+                    .bindPopup("起點：" + currentStart.name);
+
+                markers.push(startMarker);
+                document.body.className = "theme-" + data.theme;
+                updateMusicText(mood);
+
+                const container = document.getElementById("places");
+                container.innerHTML = "";
+
+                renderPlaces();
+
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function renderPlaces() {
+            const t = uiText[currentLang];
+            const container = document.getElementById("places");
+            container.innerHTML = "";
+
+            currentPlaces.forEach((place, index) => {
+                const div = document.createElement("div");
+                div.className = "place-card";
+
+                div.innerHTML = `
+                    <h3>${place.name}</h3>
+                    <p>${t.category}：${place.category}</p>
+                    <p>${t.distance}：${place.distance_km} km</p>
+                    <p class="time-tag">${timeIcon(place.time_tag)}</p>
+
+                    <div class="card-actions">
+                        <button onclick="getRoute(${index})">${t.route}</button>
+                        <button class="fav-btn" title="${t.save}" onclick="saveFavorite(${index})">☆</button>
+                    </div>
+                `;
+
+                container.appendChild(div);
+            });
+        }
+
+        function randomPlace() {
+            if (!currentPlaces || currentPlaces.length === 0) {
+                alert("請先搜尋地點");
+                return;
+            }
+
+            const randomIndex = Math.floor(Math.random() * currentPlaces.length);
+            getRoute(randomIndex);
+        }
+
+        async function getRoute(index) {
+            const place = currentPlaces[index];
+
+            showLoading(uiText[currentLang].loadingRoute);
+
+            try {
+                const res = await fetch("/api/route", {
+                    method: "POST",
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify({
+                        start: currentStart,
+                        end: place
+                    })
+                });
+
+                const route = await res.json();
+
+                if (routeLayer) {
+                    map.removeLayer(routeLayer);
+                }
+
+                routeLayer = L.polyline(route.route_coords, {
+                    color: getThemeColor(),
+                    weight: 7,
+                    opacity: 1,
+                    lineCap: "round",
+                    lineJoin: "round"
+                }).addTo(map);
+
+                if (destinationMarker) {
+                    map.removeLayer(destinationMarker);
+                }
+
+                const destIcon = L.divIcon({
+                    className: "",
+                    html: `<div class="dest-marker"><span></span></div>`,
+                    iconSize: [42, 42],
+                    iconAnchor: [21, 42]
+                });
+
+                destinationMarker = L.marker(place.coords, { icon: destIcon })
+                    .addTo(map)
+                    .bindPopup("目的地：" + place.name);
+
+                map.fitBounds(routeLayer.getBounds());
+
+                const t = uiText[currentLang];
+
+                document.getElementById("route-info").innerHTML = `
+                    <h3>${t.routeInfo}</h3>
+                    <p>${t.destination}：${place.name}</p>
+                    <p>${t.distance}：${route.distance_km} km</p>
+                    <p>${t.duration}：${route.duration_min} min</p>
+                `;
+            } finally {
+                hideLoading();
+            }
+        }
+        updateStaticText();
+        updateMoodOptions();
+        updateMoodText();
+        
+    </script>
+</body>
+</html>
