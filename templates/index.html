@@ -156,20 +156,30 @@
             background: rgba(255, 255, 255, 0.16);
             color: var(--text-main);
         }
+
+        #mood-text {
+            color: var(--text-sub);
+            font-size: 14px;
+            line-height: 1.6;
+            margin-top: -8px;
+            margin-bottom: 18px;
+        }
     </style>
 </head>
 
 <body class="theme-tired">
     <div id="sidebar">
         <h1>Now Here to Go</h1>
+        <p id="mood-text">Choose a mood, then let the city answer.</p>
 
-        <select id="mood">
-            <option>Tired</option>
-            <option>Lonely</option>
-            <option>Calm</option>
-            <option>Energetic</option>
-            <option>Escape</option>
-            <option>Night Walk</option>
+        <select id="mood" onchange="updateMoodText()">
+            <option value="" selected disabled>How are you?</option>
+            <option value="Tired">Tired</option>
+            <option value="Lonely">Lonely</option>
+            <option value="Calm">Calm</option>
+            <option value="Energetic">Energetic</option>
+            <option value="Escape">Escape</option>
+            <option value="Night Walk">Night Walk</option>
         </select>
 
         <input id="start" placeholder="輸入起點，例如清華大學">
@@ -191,6 +201,15 @@
         let currentStart = null;
         let currentPlaces = [];
 
+        const moodTexts = {
+            "Tired": "找一個地方坐下來，讓今天慢一點吧~",
+            "Lonely": "有時候只是想找個地方安靜待著",
+            "Calm": "不需要目的地，只是慢慢走一段路",
+            "Energetic": "去人多一點的地方，感受世界的回應",
+            "Escape": "有的時候我真的好想逃離這一切",
+            "Night Walk": "夜晚適合漫步，也適合把事情想清楚"
+        };
+
         let map = L.map("map").setView([24.7961, 120.9966], 15);
 
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -200,6 +219,11 @@
 
         let routeLayer = null;
         let markers = [];
+
+        function updateMoodText() {
+            const mood = document.getElementById("mood").value;
+            document.getElementById("mood-text").innerText = moodTexts[mood];
+        }
 
         function timeIcon(tag) {
             if (tag === "day") return "☀️ Day";
@@ -262,6 +286,11 @@
         async function recommend() {
             const mood = document.getElementById("mood").value;
             const start = document.getElementById("start").value;
+
+            if (!mood) {
+                alert("Please Select a mood");
+                return;
+            }
 
             const res = await fetch("/api/recommend", {
                 method: "POST",
