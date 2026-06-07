@@ -6,7 +6,7 @@ class OSRMClient:
 
     def __init__(self):
         # 選擇 foot 模式
-        self.base_url = "http://router.project-osrm.org/route/v1/foot"
+        self.base_url = "http://router.project-osrm.org/route/v1/walking"
 
     def get_walking_route(self, start_lat: float, start_lon: float, end_lat: float, end_lon: float) -> dict:
         """
@@ -31,14 +31,15 @@ class OSRMClient:
                     # 抓取第一條最佳路線
                     route = data["routes"][0]
 
-                    # 提取距離 (公尺) 與時間 (秒)
+                    # 提取距離 (公尺) 
                     distance_m = route["distance"]
-                    duration_s = route["duration"]
                     geometry = route["geometry"] 
 
-                    # 轉換為使用者好讀的單位 (公里與分鐘)
-                    duration_min = round(duration_s / 60)
+                    # 轉換為使用者好讀的單位 (公里)
                     distance_km = round(distance_m / 1000, 2)
+
+                    # 假設人類漫步時速約 5.0 km/h
+                    duration_min = round((distance_km / 5.0) * 60)
 
                     # 先緯度再經度
                     flipped_coords = [[lat, lon] for lon, lat in geometry["coordinates"]]
