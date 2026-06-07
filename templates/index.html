@@ -559,7 +559,38 @@
             border: none !important;
             padding: 0;
         }
+
+        .place-card {
+            transition: transform 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+        }
+
+        .place-card:hover {
+            transform: translateY(-2px);
+            background: rgba(255, 255, 255, 0.16);
+            box-shadow:
+                0 22px 48px rgba(0, 0, 0, 0.32),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
         
+        button {
+            transition: transform 0.15s ease, filter 0.15s ease, opacity 0.15s ease;
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+            filter: brightness(1.08);
+        }
+
+        button:active {
+            transform: translateY(0);
+            filter: brightness(0.96);
+        }
+
+        #route-info:not(:empty) {
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            background: rgba(255, 255, 255, 0.13);
+        }
+
     </style>
 </head>
 
