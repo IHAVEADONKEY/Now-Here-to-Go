@@ -175,6 +175,7 @@
         <input id="start" placeholder="輸入起點，例如清華大學">
         <button onclick="recommend()">開始探索</button>
         <button id="random-btn" onclick="randomPlace()" style="display:none;">隨機地點</button>
+        <button onclick="showFavorites()">查看收藏</button>
 
         <h2 id="music"></h2>
         <div id="route-info"></div>
@@ -214,6 +215,38 @@
 
             localStorage.setItem("favorites", JSON.stringify(favorites));
             alert("已加入收藏：" + place.name);
+        }
+        function showFavorites() {
+            const favorites = JSON.parse(localStorage.getItem("favorites")) || [];
+            const container = document.getElementById("places");
+
+            container.innerHTML = "<h2>收藏地點</h2>";
+
+            if (favorites.length === 0) {
+                container.innerHTML += "<p>目前沒有收藏地點。</p>";
+                return;
+            }
+
+            favorites.forEach((place, index) => {
+                const div = document.createElement("div");
+                div.className = "place-card";
+
+                div.innerHTML = `
+                    <h3>${place.name}</h3>
+                    <p>類型：${place.category}</p>
+                    <p class="time-tag">${timeIcon(place.time_tag)}</p>
+                    <button onclick="removeFavorite(${index})">移除收藏</button>
+                `;
+
+                container.appendChild(div);
+            });
+        }
+
+        function removeFavorite(index) {
+            let favorites = JSON.parse(localStorage.getItem("favorites")) || [];
+            favorites.splice(index, 1);
+            localStorage.setItem("favorites", JSON.stringify(favorites));
+            showFavorites();
         }
 
         function clearMap() {
